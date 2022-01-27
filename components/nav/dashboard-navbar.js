@@ -10,7 +10,19 @@ import { BellIcon, MenuIcon, XIcon, LogoutIcon } from '@heroicons/react/outline'
 import { Disclosure, Menu, Transition } from '@headlessui/react'
 let Web3 = require('web3');
 import { withRouter } from 'next/router'
-
+const networks = {
+    polygon: {
+      chainId: `0x${Number(137).toString(16)}`,
+      chainName: "Polygon Mainnet",
+      nativeCurrency: {
+        name: "MATIC",
+        symbol: "MATIC",
+        decimals: 18
+      },
+      rpcUrls: ["https://polygon-rpc.com/"],
+      blockExplorerUrls: ["https://polygonscan.com/"]
+    }
+}
 
 function Navbar({  router, headerName }) {
 
@@ -32,13 +44,39 @@ function Navbar({  router, headerName }) {
     }
 
     const [address, setAddress] = useState([])
+    const [network, setNetwork] = useState([])
     const [web3, setWeb3] = useState([])
+    const [error, setError] = useState();
+
+    const handleNetworkSwitch = async (networkName) => {
+        setError();
+        await changeNetwork({ networkName, setError });
+      };
+      const networkChanged = (chainId) => {
+        console.log({ chainId });
+      };
+    
+      const changeNetwork = async ({ networkName, setError }) => {
+        try {
+          if (!window.ethereum) throw new Error("No crypto wallet found");
+          await window.ethereum.request({
+            method: "wallet_addEthereumChain",
+            params: [
+              {
+                ...networks[networkName]
+              }
+            ]
+          });
+        } catch (err) {
+          setError(err.message);
+        }
+      };
 
     function connectToMetamask() {
         window.ethereum ?
             ethereum.request({ method: "eth_requestAccounts" }).then((accounts) => {
                 setAddress(accounts[0])
-
+                
                 let w3 = new Web3(ethereum)
                 setWeb3(w3)
 
@@ -59,6 +97,11 @@ function Navbar({  router, headerName }) {
             let web3;
             if (window.ethereum) {
                 web3 = new Web3(window.ethereum);
+                window.ethereum.on("chainChanged", networkChanged);
+                return () => {
+                    window.ethereum.removeListener("chainChanged", networkChanged);
+                  };
+                
             } else if (window.web3) {
                 web3 = new Web3(window.web3.currentProvider);
             };
@@ -126,8 +169,8 @@ function Navbar({  router, headerName }) {
                                 </div>
                                 <div className="hidden md:block">
                                     <div className="ml-4 flex items-center md:ml-6">
-
                                         {/* Profile dropdown */}
+                                        <button onClick={() => handleNetworkSwitch("polygon")}>Switch To Polygon</button>
                                         <Menu as="div" className="ml-3 relative">
                                             <div>
                                                 <div className="max-w-xs bg-purple-600 rounded-full flex items-center text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-purple-600 focus:ring-white">
@@ -153,6 +196,7 @@ function Navbar({  router, headerName }) {
                                         </Menu>
 
                                         {/* Logout button */}
+                                        
                                         {session && <>
                                             <button
                                                 type="button"
@@ -165,6 +209,7 @@ function Navbar({  router, headerName }) {
                                     </div>
                                 </div>
                                 <div className="-mr-2 flex md:hidden">
+                                
                                     {/* Mobile menu button */}
                                     <Disclosure.Button className="bg-purple-600 inline-flex items-center justify-center p-2 rounded-md text-purple-200 hover:text-white hover:bg-purple-500 hover:bg-opacity-75 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-purple-600 focus:ring-white">
                                         <span className="sr-only">Open main menu</span>
